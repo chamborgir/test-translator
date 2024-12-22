@@ -5,7 +5,7 @@ from keras.layers import Input, LSTM, Dense
 # INSTALL (tensorflow, numpy, pandas)
 
 # Paths
-dataset_path = "./data/phrase-table-filtered"
+dataset_path = "./data/data.txt"
 
 # Parameters
 batch_size = 64
@@ -122,23 +122,38 @@ decoder_model = Model(
 )
 
 # Function to decode sequences
-def decode_sequence(input_seq):
+import numpy as np
+
+def decode_sequence(input_seq, temperature=1.0):
     states_value = encoder_model.predict(input_seq)
     target_seq = np.zeros((1, 1, num_decoder_tokens))
-    target_seq[0, 0, target_token_index["\t"]] = 1.0
+    target_seq[0, 0, target_token_index["\t"]] = 1.0  # Start token
     stop_condition = False
     decoded_sentence = ""
     while not stop_condition:
         output_tokens, h, c = decoder_model.predict([target_seq] + states_value)
-        sampled_token_index = np.argmax(output_tokens[0, -1, :])
+        
+        # Adjust the output probabilities with temperature
+        output_tokens = output_tokens[0, -1, :]
+        output_tokens = np.log(output_tokens + 1e-7) / temperature
+        output_tokens = np.exp(output_tokens) / np.sum(np.exp(output_tokens))  # Normalize to get probabilities
+        
+        # Sample a token based on the adjusted probabilities
+        sampled_token_index = np.random.choice(len(output_tokens), p=output_tokens)
         sampled_char = reverse_target_char_index[sampled_token_index]
+        
         decoded_sentence += sampled_char
+        
         if sampled_char == "\n" or len(decoded_sentence) > max_decoder_seq_length:
             stop_condition = True
+        
         target_seq = np.zeros((1, 1, num_decoder_tokens))
         target_seq[0, 0, sampled_token_index] = 1.0
         states_value = [h, c]
+    
+    print(f"Decoded sentence: {decoded_sentence}")
     return decoded_sentence
+
 
 # Real-time translation
 while True:
@@ -150,4 +165,4 @@ while True:
         if char in input_token_index:
             input_seq[0, t, input_token_index[char]] = 1.0
     translated_text = decode_sequence(input_seq)
-    print(f"Translated to Filipino: {translated_text}")
+    print(f"Translated to Filipino: {translated_text.strip()}")
