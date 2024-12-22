@@ -1,6 +1,7 @@
 import numpy as np
-from keras.models import Model
-from keras.layers import Input, LSTM, Dense
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, LSTM, Dense
+from tensorflow.keras.preprocessing.text import Tokenizer
 
 # INSTALL (tensorflow, numpy, pandas)
 
